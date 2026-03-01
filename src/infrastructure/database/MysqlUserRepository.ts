@@ -35,8 +35,20 @@ export class MysqlUserRepository implements IUserRepository {
 
   async findById(id: string): Promise<User | null> {
     const [rows] = await this.pool.execute<any[]>(
-      `SELECT id, name, email, password, created_at as createdAt FROM users WHERE id = ?`,
+      `SELECT id, name, email, password, created_at as createdAt 
+       FROM users WHERE id = ?`,
       [id]
+    );
+
+    return rows.length ? rows[0] : null;
+  }
+
+  /* 🔥 MÉTODO NUEVO PARA LOGIN OPTIMIZADO */
+  async findByEmail(email: string): Promise<User | null> {
+    const [rows] = await this.pool.execute<any[]>(
+      `SELECT id, name, email, password, created_at as createdAt 
+       FROM users WHERE email = ?`,
+      [email]
     );
 
     return rows.length ? rows[0] : null;
@@ -44,6 +56,7 @@ export class MysqlUserRepository implements IUserRepository {
 
   async update(id: string, data: Partial<CreateUserDto>): Promise<User> {
     const user = await this.findById(id);
+
     if (!user) {
       throw new Error(`User with id ${id} not found`);
     }
@@ -51,7 +64,9 @@ export class MysqlUserRepository implements IUserRepository {
     const updated = { ...user, ...data };
 
     await this.pool.execute(
-      `UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?`,
+      `UPDATE users 
+       SET name = ?, email = ?, password = ? 
+       WHERE id = ?`,
       [updated.name, updated.email, updated.password, id]
     );
 
@@ -59,6 +74,9 @@ export class MysqlUserRepository implements IUserRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await this.pool.execute(`DELETE FROM users WHERE id = ?`, [id]);
+    await this.pool.execute(
+      `DELETE FROM users WHERE id = ?`,
+      [id]
+    );
   }
 }

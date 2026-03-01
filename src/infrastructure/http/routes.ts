@@ -14,7 +14,9 @@ const voteController = new VoteController();
 const cartController = new CartController();
 
 /* USER */
-router.post("/users", userController.create);
+router.post("/users/register", userController.register);
+router.post("/users/login", userController.login);
+
 router.get("/users", userController.getAll);
 router.put("/users/:id", userController.update);
 router.delete("/users/:id", userController.delete);
