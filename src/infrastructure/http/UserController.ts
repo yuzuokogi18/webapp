@@ -27,12 +27,12 @@ export class UserController {
         });
       }
 
-      const hashed = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await this.repo.create({
         name,
         email,
-        password: hashed,
+        password: hashedPassword,
       });
 
       const token = this.jwt.generateToken({
@@ -40,17 +40,18 @@ export class UserController {
         email: user.email,
       });
 
+      // 🔥 Siempre devolvemos token
       return res.status(201).json({
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
         },
-        token,
+        token: token,
       });
 
     } catch (error) {
-      console.error(error);
+      console.error("REGISTER ERROR:", error);
       return res.status(500).json({
         message: "Error al registrar usuario",
       });
@@ -76,9 +77,9 @@ export class UserController {
         });
       }
 
-      const valid = await bcrypt.compare(password, user.password);
+      const isValid = await bcrypt.compare(password, user.password);
 
-      if (!valid) {
+      if (!isValid) {
         return res.status(401).json({
           message: "Credenciales incorrectas",
         });
@@ -89,17 +90,18 @@ export class UserController {
         email: user.email,
       });
 
-      return res.json({
+      // 🔥 Siempre devolvemos token
+      return res.status(200).json({
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
         },
-        token,
+        token: token,
       });
 
     } catch (error) {
-      console.error(error);
+      console.error("LOGIN ERROR:", error);
       return res.status(500).json({
         message: "Error al iniciar sesión",
       });
@@ -111,16 +113,17 @@ export class UserController {
     try {
       const users = await this.repo.findAll();
 
-      const sanitized = users.map(u => ({
+      const sanitized = users.map((u) => ({
         id: u.id,
         name: u.name,
         email: u.email,
         createdAt: u.createdAt,
       }));
 
-      return res.json(sanitized);
+      return res.status(200).json(sanitized);
 
     } catch (error) {
+      console.error("GET ALL USERS ERROR:", error);
       return res.status(500).json({
         message: "Error al obtener usuarios",
       });
@@ -131,6 +134,7 @@ export class UserController {
   update = async (req: Request, res: Response) => {
     try {
       const { name, email, password } = req.body;
+
       const id = Array.isArray(req.params.id)
         ? req.params.id[0]
         : req.params.id;
@@ -147,13 +151,14 @@ export class UserController {
         password: hashedPassword,
       });
 
-      return res.json({
+      return res.status(200).json({
         id: updated.id,
         name: updated.name,
         email: updated.email,
       });
 
     } catch (error) {
+      console.error("UPDATE USER ERROR:", error);
       return res.status(500).json({
         message: "Error al actualizar usuario",
       });
@@ -169,11 +174,12 @@ export class UserController {
 
       await this.repo.delete(id);
 
-      return res.json({
+      return res.status(200).json({
         message: "User deleted",
       });
 
     } catch (error) {
+      console.error("DELETE USER ERROR:", error);
       return res.status(500).json({
         message: "Error al eliminar usuario",
       });
