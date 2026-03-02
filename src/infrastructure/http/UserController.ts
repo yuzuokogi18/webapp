@@ -27,7 +27,6 @@ export class UserController {
         });
       }
 
-      // hash password before saving
       const hashed = await bcrypt.hash(password, 10);
 
       const user = await this.repo.create({
@@ -36,19 +35,18 @@ export class UserController {
         password: hashed,
       });
 
-      // generate token for the new user
       const token = this.jwt.generateToken({
         userId: user.id,
         email: user.email,
       });
 
       return res.status(201).json({
-        token,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
         },
+        token,
       });
 
     } catch (error) {
@@ -79,6 +77,7 @@ export class UserController {
       }
 
       const valid = await bcrypt.compare(password, user.password);
+
       if (!valid) {
         return res.status(401).json({
           message: "Credenciales incorrectas",
@@ -91,12 +90,12 @@ export class UserController {
       });
 
       return res.json({
-        token,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
         },
+        token,
       });
 
     } catch (error) {
@@ -136,10 +135,16 @@ export class UserController {
         ? req.params.id[0]
         : req.params.id;
 
+      let hashedPassword = password;
+
+      if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+
       const updated = await this.repo.update(id, {
         name,
         email,
-        password,
+        password: hashedPassword,
       });
 
       return res.json({
