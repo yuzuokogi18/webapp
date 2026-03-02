@@ -1,9 +1,12 @@
 import type { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import { JwtService } from "../auth/JwtService";
 import { getDatabase } from "../database/DatabaseConnection";
 import { MysqlUserRepository } from "../database/MysqlUserRepository";
 
 export class UserController {
   private repo = new MysqlUserRepository(getDatabase());
+  private jwt = new JwtService();
 
   /* ================= REGISTER ================= */
   register = async (req: Request, res: Response) => {
@@ -24,13 +27,23 @@ export class UserController {
         });
       }
 
+      // hash password before saving
+      const hashed = await bcrypt.hash(password, 10);
+
       const user = await this.repo.create({
         name,
         email,
-        password,
+        password: hashed,
+      });
+
+      // generate token for the new user
+      const token = this.jwt.generateToken({
+        userId: user.id,
+        email: user.email,
       });
 
       return res.status(201).json({
+        token,
         user: {
           id: user.id,
           name: user.name,
@@ -59,13 +72,26 @@ export class UserController {
 
       const user = await this.repo.findByEmail(email);
 
-      if (!user || user.password !== password) {
+      if (!user) {
         return res.status(401).json({
           message: "Credenciales incorrectas",
         });
       }
 
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) {
+        return res.status(401).json({
+          message: "Credenciales incorrectas",
+        });
+      }
+
+      const token = this.jwt.generateToken({
+        userId: user.id,
+        email: user.email,
+      });
+
       return res.json({
+        token,
         user: {
           id: user.id,
           name: user.name,

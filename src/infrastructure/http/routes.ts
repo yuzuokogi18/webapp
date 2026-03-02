@@ -4,6 +4,7 @@ import { RoomController } from "./RoomController";
 import { ProductController } from "./ProductController";
 import { VoteController } from "./VoteController";
 import { CartController } from "./CartController";
+import { authMiddleware } from "../auth/AuthMiddleware";
 
 const router = Router();
 
@@ -21,10 +22,10 @@ router.get("/users", userController.getAll);
 router.put("/users/:id", userController.update);
 router.delete("/users/:id", userController.delete);
 
-/* ROOM */
-router.post("/rooms", roomController.create);
+/* ROOM protegido */
+router.post("/rooms", authMiddleware, roomController.create);
 router.get("/rooms/:id", roomController.getById);
-router.put("/rooms/:id/close", roomController.close);
+router.put("/rooms/:id/close", authMiddleware, roomController.close);
 
 /* PRODUCT */
 router.post("/products", productController.create);
