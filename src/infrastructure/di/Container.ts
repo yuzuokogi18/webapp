@@ -4,6 +4,7 @@ import { getDatabase } from "../database/DatabaseConnection";
 import { MysqlUserRepository } from "../database/MysqlUserRepository";
 import { MysqlRoomRepository } from "../database/MysqlRoomRepository";
 import { MysqlAuctionRepository } from "../database/MysqlAuctionRepository";
+import { MysqlVoteRepository } from "../database/MysqlVoteRepository"; // ✅ NUEVO
 
 // 🔹 User / Room UseCases
 import { CreateUserUseCase } from "../../application/use-cases/user/CreateUserUseCase";
@@ -16,12 +17,16 @@ import { PlaceBidUseCase } from "../../application/use-cases/Auction/PlaceBidUse
 import { CloseAuctionUseCase } from "../../application/use-cases/Auction/CloseAuctionUseCase";
 import { GetActiveAuctionUseCase } from "../../application/use-cases/Auction/GetActiveAuctionUseCase";
 
+// 🔹 Vote UseCase
+import { VoteProductUseCase } from "../../application/use-cases/vote/VoteProductUseCase"; // ✅ NUEVO
+
 // 🔹 Servers
 import { HttpApiServer } from "../http/HttpApiServer";
 import { RoomWebSocketServer } from "../websocket/RoomWebSocketServer";
 
 export class Container {
   static bootstrap() {
+
     // ========================
     // 🔹 Database
     // ========================
@@ -33,6 +38,7 @@ export class Container {
     const userRepo = new MysqlUserRepository(pool);
     const roomRepo = new MysqlRoomRepository(pool);
     const auctionRepo = new MysqlAuctionRepository(pool);
+    const voteRepo = new MysqlVoteRepository(pool); // ✅ NUEVO
 
     // ========================
     // 🔹 Use Cases
@@ -47,6 +53,8 @@ export class Container {
     const closeAuctionUseCase = new CloseAuctionUseCase(auctionRepo);
     const getActiveAuctionUseCase = new GetActiveAuctionUseCase(auctionRepo);
 
+    const voteUseCase = new VoteProductUseCase(voteRepo); // ✅ NUEVO
+
     // ========================
     // 🔹 Servers
     // ========================
@@ -59,7 +67,8 @@ export class Container {
       createAuctionUseCase,
       placeBidUseCase,
       closeAuctionUseCase,
-      getActiveAuctionUseCase
+      getActiveAuctionUseCase,
+      voteUseCase // ✅ NUEVO
     );
 
     console.log("🔥 Application Bootstrapped");

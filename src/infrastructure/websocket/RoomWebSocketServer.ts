@@ -9,6 +9,8 @@ import type { PlaceBidUseCase } from "../../application/use-cases/Auction/PlaceB
 import type { CloseAuctionUseCase } from "../../application/use-cases/Auction/CloseAuctionUseCase";
 import type { GetActiveAuctionUseCase } from "../../application/use-cases/Auction/GetActiveAuctionUseCase";
 
+import type { VoteProductUseCase } from "../../application/use-cases/vote/VoteProductUseCase";
+
 export class RoomWebSocketServer {
   private io: Server;
 
@@ -19,7 +21,8 @@ export class RoomWebSocketServer {
     private readonly createAuctionUseCase: CreateAuctionUseCase,
     private readonly placeBidUseCase: PlaceBidUseCase,
     private readonly closeAuctionUseCase: CloseAuctionUseCase,
-    private readonly getActiveAuctionUseCase: GetActiveAuctionUseCase
+    private readonly getActiveAuctionUseCase: GetActiveAuctionUseCase,
+    private readonly voteUseCase: VoteProductUseCase   // ✅ NUEVO
   ) {
     const httpServer = createServer();
 
@@ -37,6 +40,11 @@ export class RoomWebSocketServer {
       */
       socket.on("join_room", async (data) => {
         try {
+          if (!data.roomId || !data.userId) {
+            socket.emit("error", "roomId y userId son requeridos");
+            return;
+          }
+
           const result = await this.joinUseCase.execute(
             data.roomId,
             data.userId
@@ -44,7 +52,6 @@ export class RoomWebSocketServer {
 
           socket.join(data.roomId);
 
-          // 🔥 Enviar subasta activa si existe
           const auction = await this.getActiveAuctionUseCase.execute(
             data.roomId
           );
@@ -105,7 +112,7 @@ export class RoomWebSocketServer {
 
       /*
       =========================
-      OFERTAS
+      NUEVA PUJA (SUBASTA)
       =========================
       */
       socket.on("bid", async (data) => {
@@ -117,6 +124,32 @@ export class RoomWebSocketServer {
           );
 
           this.io.to(data.roomId).emit("new_bid", auction);
+
+        } catch (err: any) {
+          socket.emit("error", err.message);
+        }
+      });
+
+      /*
+      =========================
+      NUEVO VOTO DE PRODUCTO
+      =========================
+      */
+      socket.on("vote_product", async (data) => {
+        try {
+          if (!data.roomId || !data.productId || !data.userId || !data.value) {
+            socket.emit("error", "Datos incompletos para votar");
+            return;
+          }
+
+          const vote = await this.voteUseCase.execute({
+            userId: data.userId,
+            productId: data.productId,
+            value: data.value,
+          });
+
+          // 🔥 Emitir a todos en la sala
+          this.io.to(data.roomId).emit("new_vote", vote);
 
         } catch (err: any) {
           socket.emit("error", err.message);
