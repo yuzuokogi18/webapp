@@ -13,7 +13,11 @@ const roomController = new RoomController();
 const productController = new ProductController();
 const voteController = new VoteController();
 const cartController = new CartController();
-
+/* ROOM - Mueve el GET arriba del POST */
+router.get("/rooms", roomController.getAll); // Ahora esta es la primera que se lee
+router.post("/rooms", authMiddleware, roomController.create);
+router.get("/rooms/:id", roomController.getById);
+router.put("/rooms/:id/close", authMiddleware, roomController.close);
 /* USER */
 router.post("/users/register", userController.register);
 router.post("/users/login", userController.login);
@@ -22,10 +26,7 @@ router.get("/users", userController.getAll);
 router.put("/users/:id", userController.update);
 router.delete("/users/:id", userController.delete);
 
-/* ROOM protegido */
-router.post("/rooms", authMiddleware, roomController.create);
-router.get("/rooms/:id", roomController.getById);
-router.put("/rooms/:id/close", authMiddleware, roomController.close);
+
 
 /* PRODUCT */
 router.post("/products", productController.create);

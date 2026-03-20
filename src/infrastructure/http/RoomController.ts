@@ -9,15 +9,16 @@ export class RoomController {
   OBTENER TODAS LAS SALAS
   =========================
   */
-  getAll = async (req: Request, res: Response) => {
-    try {
-      const rooms = await this.repo.findAll();
-      res.json(rooms);
-    } catch (err: any) {
-      console.error("❌ Error al obtener salas:", err.message);
-      res.status(500).json({ error: err.message });
-    }
-  };
+  getAll = async (_req: Request, res: Response) => {
+  try {
+    console.log("🔍 Intentando obtener todas las salas...");
+    const rooms = await this.repo.findAll();
+    res.json(rooms);
+  } catch (err: any) {
+    console.error("❌ Error en el controlador:", err.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
 
   /* =========================
   CREAR SALA
