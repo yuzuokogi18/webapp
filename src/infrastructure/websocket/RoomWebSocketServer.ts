@@ -22,12 +22,15 @@ export class RoomWebSocketServer {
     private readonly placeBidUseCase: PlaceBidUseCase,
     private readonly closeAuctionUseCase: CloseAuctionUseCase,
     private readonly getActiveAuctionUseCase: GetActiveAuctionUseCase,
-    private readonly voteUseCase: VoteProductUseCase   // ✅ NUEVO
+    private readonly voteUseCase: VoteProductUseCase
   ) {
     const httpServer = createServer();
 
     this.io = new Server(httpServer, {
-      cors: { origin: "*" },
+      cors: { 
+        origin: "*",
+        methods: ["GET", "POST"] 
+      },
     });
 
     this.io.on("connection", (socket) => {
@@ -45,23 +48,21 @@ export class RoomWebSocketServer {
             return;
           }
 
-          const result = await this.joinUseCase.execute(
-            data.roomId,
-            data.userId
-          );
-
+          const result = await this.joinUseCase.execute(data.roomId, data.userId);
           socket.join(data.roomId);
 
-          const auction = await this.getActiveAuctionUseCase.execute(
-            data.roomId
-          );
+          // Si ya hay una subasta activa, se la mandamos al que acaba de entrar
+          const auction = await this.getActiveAuctionUseCase.execute(data.roomId);
 
           if (auction) {
-            socket.emit("product_created", auction);
+            // Nos aseguramos de que el objeto tenga el productId que el front espera
+            socket.emit("product_created", {
+              ...auction,
+              productId: auction.productId || data.productId 
+            });
           }
 
           this.io.to(data.roomId).emit("user_joined", result);
-
         } catch (err: any) {
           socket.emit("error", err.message);
         }
@@ -74,15 +75,9 @@ export class RoomWebSocketServer {
       */
       socket.on("leave_room", async (data) => {
         try {
-          const result = await this.leaveUseCase.execute(
-            data.roomId,
-            data.userId
-          );
-
+          const result = await this.leaveUseCase.execute(data.roomId, data.userId);
           socket.leave(data.roomId);
-
           this.io.to(data.roomId).emit("user_left", result);
-
         } catch (err: any) {
           socket.emit("error", err.message);
         }
@@ -104,7 +99,6 @@ export class RoomWebSocketServer {
           });
 
           this.io.to(data.roomId).emit("product_created", auction);
-
         } catch (err: any) {
           socket.emit("error", err.message);
         }
@@ -112,20 +106,30 @@ export class RoomWebSocketServer {
 
       /*
       =========================
-      NUEVA PUJA (SUBASTA)
+      NUEVA PUJA (SUBASTA) - CORREGIDO
       =========================
       */
       socket.on("bid", async (data) => {
         try {
+          console.log(`📩 Intento de puja: Sala ${data.roomId}, User ${data.userId}, Cantidad ${data.amount}`);
+          
           const auction = await this.placeBidUseCase.execute(
             data.roomId,
             data.userId,
             data.amount
           );
 
-          this.io.to(data.roomId).emit("new_bid", auction);
+          // 🔥 IMPORTANTE: Inyectamos el productId para que el Front lo reconozca
+          const bidPayload = {
+            ...auction,
+            productId: auction.productId || data.productId 
+          };
+
+          this.io.to(data.roomId).emit("new_bid", bidPayload);
+          console.log(`✅ Puja exitosa enviada a sala ${data.roomId}`);
 
         } catch (err: any) {
+          console.error("❌ Error en bid:", err.message);
           socket.emit("error", err.message);
         }
       });
@@ -148,8 +152,10 @@ export class RoomWebSocketServer {
             value: data.value,
           });
 
-          // 🔥 Emitir a todos en la sala
-          this.io.to(data.roomId).emit("new_vote", vote);
+          this.io.to(data.roomId).emit("new_vote", {
+            ...vote,
+            productId: data.productId // Aseguramos ID para el front
+          });
 
         } catch (err: any) {
           socket.emit("error", err.message);
@@ -169,7 +175,6 @@ export class RoomWebSocketServer {
           );
 
           this.io.to(data.roomId).emit("auction_closed", auction);
-
         } catch (err: any) {
           socket.emit("error", err.message);
         }
@@ -181,7 +186,7 @@ export class RoomWebSocketServer {
     });
 
     httpServer.listen(port, () => {
-      console.log(`🚀 WebSocket running on http://localhost:${port}`);
+      console.log(`🚀 WebSocket running on port ${port}`);
     });
   }
 }
